@@ -6,18 +6,21 @@
 	let player: Mpegts.Player;
 
 	let interval: NodeJS.Timeout;
+	let reconnectTimeout: NodeJS.Timeout;
 	let fps = 30;
 
 	let massiveMargin = false;
+	let videoRotation = 180;
 
 	onMount(async () => {
 		const params = new URLSearchParams(location.search);
 		const url = params.get('url');
 		fps = +(params.get('fps') || fps);
 		massiveMargin = params.get('mm') === 'true';
+		videoRotation = +(params.get('rotate') ?? videoRotation);
 
 		if (!url) {
-			alert(`Please enter a URL in the "url" query parameter, e.g. "?url=rtmp://localhost/live"`);
+			alert(`Please enter a URL in the "url" query parameter, e.g. "?url=http://ftc-cam1.local:8000/live.ts"`);
 			window.close();
 			return;
 		}
@@ -25,18 +28,38 @@
 		const mpegts = (await import('mpegts.js')).default;
 
 		if (mpegts.isSupported()) {
-			player = mpegts.createPlayer({
-				type: 'mpegts',
-				url: url,
-				isLive: true
-			});
-
-			player.attachMediaElement(video);
-			player.load();
-
+			connect(mpegts, url);
 			playPause();
 		}
 	});
+
+	function connect(mpegts: typeof Mpegts, url: string) {
+		player = mpegts.createPlayer(
+			{
+				type: 'mpegts',
+				url: url,
+				isLive: true,
+				hasAudio: false
+			},
+			{
+				enableStashBuffer: false
+			}
+		);
+
+		// A camera reboot or dropped cable ends the stream, so keep retrying until it returns
+		const reconnect = () => {
+			clearTimeout(reconnectTimeout);
+			reconnectTimeout = setTimeout(() => {
+				player.destroy();
+				connect(mpegts, url);
+			}, 1000);
+		};
+		player.on(mpegts.Events.ERROR, reconnect);
+		player.on(mpegts.Events.LOADING_COMPLETE, reconnect);
+
+		player.attachMediaElement(video);
+		player.load();
+	}
 
 	function playPause() {
 		if (video.paused) {
@@ -58,7 +81,7 @@
 
 <div id="frame">
 	<div id="content">
-		<video bind:this={video} playsinline></video>
+		<video bind:this={video} playsinline style:rotate="{videoRotation}deg"></video>
 		<button on:click={playPause} class:massive-margin={massiveMargin}>Play / Pause</button>
 		<div>
 			<button on:click={() => offset(-fps / 6)}>← {fps / 6} F</button>
@@ -101,7 +124,6 @@
 			video {
 				width: 100vw;
 				height: calc(100vw / 16 * 9);
-				rotate: 180deg;
 			}
 
 			div {

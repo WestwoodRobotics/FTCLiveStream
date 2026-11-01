@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+
+# The Pi 5 has no hardware H.264 encoder, so --low-latency trades a little quality for delay
+rpicam-vid -t 0 -n \
+	--width "$WIDTH" --height "$HEIGHT" --framerate "$FPS" \
+	--codec libav --libav-format mpegts \
+	--bitrate "$BITRATE" --intra "$INTRA" --inline --low-latency \
+	--denoise cdn_off --rotation "$ROTATION" ${FOCUS_ARGS:-} \
+	-o - | exec python3 /opt/ftc-cam/ts-relay.py --port "$PORT"

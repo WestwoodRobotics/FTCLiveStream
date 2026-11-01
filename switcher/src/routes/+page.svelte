@@ -197,6 +197,33 @@
 		handleMessageType(data.type);
 	}
 
+	function connectWs() {
+		try {
+			wsRef = new WebSocket(WS_URL);
+		} catch (e) {
+			addLog('WebSocket connection failed');
+			console.warn('WebSocket connection failed', e);
+			return;
+		}
+
+		wsRef.addEventListener('open', () => {
+			addLog('WebSocket connected to ' + WS_URL);
+		});
+		wsRef.addEventListener('message', (e) => {
+			addLog('WS message: ' + e.data);
+			handleWsMessage(e);
+		});
+		wsRef.addEventListener('error', (e) => {
+			addLog('WebSocket error');
+			console.error('WebSocket error', e);
+		});
+		wsRef.addEventListener('close', () => {
+			addLog('WebSocket closed, reconnecting...');
+			wsRef = null;
+			setTimeout(connectWs, 1000);
+		});
+	}
+
 	function initCameras() {
 		for (const key of Object.keys(CAMERA_COLORS)) {
 			const el = cameraRefs[key];
@@ -212,9 +239,9 @@
 		obsMode = urlParams.get('obs') === 'true';
 		field1Url = decodeURIComponent(urlParams.get('field1') ?? 'about:blank');
 		field2Url = decodeURIComponent(urlParams.get('field2') ?? 'about:blank');
-		WS_URL = urlParams.get('ws') ?? 'ws://localhost/stream/display/command/?code=ustxcrlt1';
+		WS_URL = urlParams.get('ws') ?? '';
 		OBS_URL = urlParams.get('obsUrl') ?? 'ws://localhost:4455';
-		OBS_PASSWORD = urlParams.get('obsPassword') ?? 'gq6HvwqxwGdFpIrE';
+		OBS_PASSWORD = urlParams.get('obsPassword') ?? '';
 		CAMERA_COLORS['field1'].label = urlParams.get('field1') ?? CAMERA_COLORS['field1'].label;
 		CAMERA_COLORS['field2'].label = urlParams.get('field2') ?? CAMERA_COLORS['field2'].label;
 
@@ -252,29 +279,7 @@
 		window.addEventListener('keydown', handleKeydown);
 
 		// websocket connection - only if ws param is provided
-		if (WS_URL) {
-			try {
-				wsRef = new WebSocket(WS_URL);
-				wsRef.addEventListener('open', () => {
-					addLog('WebSocket connected to ' + WS_URL);
-				});
-				wsRef.addEventListener('message', (e) => {
-					addLog('WS message: ' + e.data);
-					handleWsMessage(e);
-				});
-				wsRef.addEventListener('error', (e) => {
-					addLog('WebSocket error');
-					console.error('WebSocket error', e);
-				});
-				wsRef.addEventListener('close', () => {
-					addLog('WebSocket closed');
-					wsRef = null;
-				});
-			} catch (e) {
-				addLog('WebSocket connection failed');
-				console.warn('WebSocket connection failed', e);
-			}
-		}
+		if (WS_URL) connectWs();
 
 		addLog(
 			'Switcher initialized' + (isLive ? '' : ' (TEST MODE)') + (WS_URL ? '' : ' - no WebSocket')

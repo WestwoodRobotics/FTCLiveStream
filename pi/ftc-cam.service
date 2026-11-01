@@ -1,0 +1,15 @@
+[Unit]
+Description=FTC livestream camera
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/ftc-cam.env
+ExecStart=/opt/ftc-cam/ftc-cam-stream
+Restart=always
+RestartSec=2
+User=ftc-cam
+SupplementaryGroups=video render
+
+[Install]
+WantedBy=multi-user.target
