@@ -7,30 +7,57 @@ presented by **20240 Slingshot**
 > 🚧 This project is in development. Please check back for more information.
 
 > [!WARNING]
-> This is the **development** branch. Please ensure you are on the right branch.
+> This is the **BioBuzz** branch. Please ensure you are on the right branch.
 
-## Development
+## Setup
 
 ### Prerequisites
 
-[Bun](https://bun.sh) and FTC Live 8.0.3 or newer (BIOBUZZ). Camera setup for Raspberry Pi 5 is in [pi/README.md](pi/README.md).
+- A Mac running OBS, with [Bun](https://bun.sh) installed.
+- FTC Live 8.0.3 or newer (BIOBUZZ).
+- Raspberry Pi 5 cameras, a PoE switch, and a USB Ethernet adapter for the Mac. Camera setup is in [pi/README.md](pi/README.md).
 
-### Project Setup
-
-Each app (`overlays`, `cam`, `switcher`) is its own package:
+### One-time setup
 
 ```sh
-cd overlays
-bun install
-bun run dev
+bun run setup
 ```
 
-| App | URL parameters |
-| --- | --- |
-| `overlays` | `host` (FTC Live `host:port`), `code` (event code), `region`, `level` |
-| `cam` | `url` (camera stream), `fps`, `rotate` (degrees, default `180`), `mm` |
-| `switcher` | `ws` (FTC Live display socket), `field1`, `field2`, `obs`, `obsUrl`, `obsPassword` |
+This installs each app's dependencies from its lockfile. It also gives each of the Mac's wired Ethernet adapters a fixed address on the camera network, 10.0.100.0/24, next to its normal address. The cameras then stay at the same addresses on any network. Run it again after plugging in a new Ethernet adapter.
 
+Then set up each camera once, following [pi/README.md](pi/README.md).
+
+### At the event
+
+1. Plug the cameras and the Mac into the PoE switch, and the switch into the scoring router.
+2. Join the venue Wi-Fi for internet, and keep Wi-Fi first in the Mac's network service order.
+3. Get the FTC Live address and event code from the scoring computer, then run:
+
+   ```sh
+   bun run start <ftclive-host[:port]> <event-code> "<region>" "<level>"
+   ```
+
+4. Fix anything the checks mark FAIL, then paste the printed URLs into OBS browser sources. On camera sources with a mic, check "Control audio via OBS".
+5. Leave the terminal open. It beeps when a camera or FTC Live drops.
+
+OBS needs Local Network access to reach FTC Live, under System Settings, Privacy & Security, Local Network. The camera pages don't, because the `cam` app relays each stream through localhost.
+
+### Apps
+
+Each app (`overlays`, `cam`, `switcher`) is its own SvelteKit package. `bun run start` launches all three; `bun run dev` inside one launches just that app.
+
+| App | Port | URL parameters |
+| --- | --- | --- |
+| `overlays` | 5173 | `host` (FTC Live `host:port`), `code` (event code), `region`, `level` |
+| `cam` | 23456 | `url` (camera stream), `fps`, `rotate` (degrees, default `180`), `mm` |
+| `switcher` | 17113 | `ws` (FTC Live display socket), `field1`, `field2`, `obs`, `obsUrl`, `obsPassword` |
+
+### Security
+
+- No passwords or keys live in this repo. Pi logins come from the user you create when flashing each card, and SSH asks for the password each time.
+- The `cam` and `overlays` pages listen on localhost only. The `cam` relay only forwards `http://` camera streams ending in `.ts`, so it can't fetch other pages.
+- The `switcher` listens on every network interface so a second device can control it. Pass an OBS WebSocket password with `obsPassword` and keep OBS WebSocket authentication on.
+- Camera streams are unencrypted and unauthenticated on the camera network. Keep cameras on the PoE switch, not on public Wi-Fi.
 
 ## Design
 
@@ -48,4 +75,4 @@ The result is a library of WebP images scaled for 4K resolution. Every asset, as
 
 ### Copyright
 
-© 2025-2026 FTC Team 20240 Slingshot and Contributors. [MIT License](LICENSE).
+© 2026-2027 FRC Team 2583 Orange Dynamite and Contributors. [MIT License](LICENSE).

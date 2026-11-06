@@ -37,9 +37,10 @@
 		player = mpegts.createPlayer(
 			{
 				type: 'mpegts',
-				url: url,
-				isLive: true,
-				hasAudio: false
+				// Fetched through this page's server so the browser only talks to localhost (see vite.config.ts)
+				url: new URL(`/relay?url=${encodeURIComponent(url)}`, location.origin).href,
+				// hasAudio is left out so a camera with a mic plays sound and one without plays video only
+				isLive: true
 			},
 			{
 				enableStashBuffer: false
@@ -64,7 +65,10 @@
 	function playPause() {
 		if (video.paused) {
 			interval = setInterval(() => {
-				player.play();
+				// OBS plays sound automatically; a normal browser blocks unmuted autoplay, so fall back to muted
+				player.play()?.catch((error: DOMException) => {
+					if (error.name === 'NotAllowedError') video.muted = true;
+				});
 			}, 1);
 		} else {
 			clearInterval(interval);
@@ -81,7 +85,14 @@
 
 <div id="frame">
 	<div id="content">
-		<video bind:this={video} playsinline style:rotate="{videoRotation}deg"></video>
+		<!-- Browsers start the video muted until someone clicks, so a click on the video turns the sound on -->
+		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_media_has_caption -->
+		<video
+			bind:this={video}
+			playsinline
+			style:rotate="{videoRotation}deg"
+			on:click={() => (video.muted = false)}
+		></video>
 		<button on:click={playPause} class:massive-margin={massiveMargin}>Play / Pause</button>
 		<div>
 			<button on:click={() => offset(-fps / 6)}>← {fps / 6} F</button>

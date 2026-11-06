@@ -1,10 +1,28 @@
 #!/bin/bash
 set -euo pipefail
 
+# Adds a USB microphone's audio to the stream when one is plugged in. It is checked with a short test
+# recording first, so a missing or broken mic leaves the video running without sound instead of failing.
+AUDIO_ARGS=()
+if [[ ${AUDIO:-auto} != off ]]; then
+	CARD=$(awk '/USB-Audio/ {print $1; exit}' /proc/asound/cards 2>/dev/null || true)
+	# Captured whole rather than piped to grep -q, which would cut the pipe and fail under pipefail
+	HELP=$(rpicam-vid --help 2>&1 || true)
+	if [[ -n $CARD && $HELP == *--libav-audio* ]] &&
+		arecord -q -D "plughw:$CARD,0" -f S16_LE -r 48000 -d 1 /dev/null 2>/dev/null; then
+		AUDIO_ARGS=(--libav-audio --audio-source alsa --audio-device "plughw:$CARD,0"
+			--audio-codec aac --audio-samplerate 48000 --audio-bitrate "${AUDIO_BITRATE:-128000}")
+		echo "Streaming audio from USB mic on ALSA card $CARD" >&2
+	else
+		echo "No working USB mic found; streaming video only" >&2
+	fi
+fi
+
 # The Pi 5 has no hardware H.264 encoder, so --low-latency trades a little quality for delay
 rpicam-vid -t 0 -n \
 	--width "$WIDTH" --height "$HEIGHT" --framerate "$FPS" \
 	--codec libav --libav-format mpegts \
 	--bitrate "$BITRATE" --intra "$INTRA" --inline --low-latency \
 	--denoise cdn_off --rotation "$ROTATION" ${FOCUS_ARGS:-} \
+	${AUDIO_ARGS[@]+"${AUDIO_ARGS[@]}"} \
 	-o - | exec python3 /opt/ftc-cam/ts-relay.py --port "$PORT"

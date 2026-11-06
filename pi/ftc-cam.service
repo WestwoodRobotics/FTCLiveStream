@@ -9,7 +9,7 @@ ExecStart=/opt/ftc-cam/ftc-cam-stream
 Restart=always
 RestartSec=2
 User=ftc-cam
-SupplementaryGroups=video render
+SupplementaryGroups=video render audio
 
 [Install]
 WantedBy=multi-user.target

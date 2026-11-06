@@ -3,6 +3,10 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "setup": "./setup-mac.sh",
+    "start": "./competition.sh"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
