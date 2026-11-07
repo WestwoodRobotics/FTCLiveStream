@@ -12,6 +12,10 @@ if [[ ${AUDIO:-auto} != off ]]; then
 		arecord -q -D "plughw:$CARD,0" -f S16_LE -r 48000 -d 1 /dev/null 2>/dev/null; then
 		AUDIO_ARGS=(--libav-audio --audio-source alsa --audio-device "plughw:$CARD,0"
 			--audio-codec aac --audio-samplerate 48000 --audio-bitrate "${AUDIO_BITRATE:-128000}")
+		# Shifts audio against video, in microseconds; measure it with tools/av-sync.py
+		if [[ ${AV_SYNC:-0} != 0 && $HELP == *--av-sync* ]]; then
+			AUDIO_ARGS+=(--av-sync "$AV_SYNC")
+		fi
 		echo "Streaming audio from USB mic on ALSA card $CARD" >&2
 	else
 		echo "No working USB mic found; streaming video only" >&2

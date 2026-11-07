@@ -37,7 +37,7 @@ Then set up each camera once, following [pi/README.md](pi/README.md).
    bun run start <ftclive-host[:port]> <event-code> "<region>" "<level>"
    ```
 
-4. Fix anything the checks mark FAIL, then paste the printed URLs into OBS browser sources. On camera sources with a mic, check "Control audio via OBS".
+4. Fix anything the checks mark FAIL, then paste the printed URLs into OBS browser sources. On camera sources with a mic, check "Control audio via OBS", and set the audio offset measured with `tools/av-sync.py` (see [pi/README.md](pi/README.md#audio-and-video-sync)).
 5. Leave the terminal open. It beeps when a camera or FTC Live drops.
 
 OBS needs Local Network access to reach FTC Live, under System Settings, Privacy & Security, Local Network. The camera pages don't, because the `cam` app relays each stream through localhost.

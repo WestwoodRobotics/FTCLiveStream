@@ -47,12 +47,25 @@ Camera settings live in `/etc/ftc-cam.env` on each Pi. After editing, run `sudo 
 | `FOCUS_ARGS` | continuous autofocus | Camera Module 3 only; remove for the HQ or Global Shutter camera |
 | `AUDIO` | `auto` | `auto` adds a USB mic's audio to the stream; `off` streams video only |
 | `AUDIO_BITRATE` | 128000 | AAC audio bitrate in bits per second |
+| `AV_SYNC` | 0 | Shifts audio against video, in microseconds; negative plays audio earlier. Usually easier to fix in OBS instead; see below |
 
 ## Audio
 
 Plug a USB mic into one of the four rectangular USB ports before the Pi powers on. The USB-C port only takes power. At startup, the camera makes a one-second test recording. If it works, the mic's audio goes into the stream; otherwise the camera streams video only. To pick up a mic plugged in later, restart the Pi by unplugging its Ethernet for a few seconds.
 
 A mic with a 3.5 mm or XLR plug needs a USB sound adapter or audio interface. To check whether the Pi sees a mic, run `lsusb` and `arecord -l` on it.
+
+## Audio and video sync
+
+With an Apple USB-C to 3.5 mm adapter as the mic input, audio and video drifted apart by only about 4 ms per hour, so a setting made at the start of an event holds all day. A fixed offset between them is normal, and `tools/av-sync.py` measures it:
+
+1. Point the camera at the Mac's screen, with its mic near the Mac's speakers and the volume up.
+2. Run `python3 tools/av-sync.py 10.0.100.20` from the repo folder. Click the page it opens, make it full screen, and press Enter in the terminal.
+3. Apply what it prints. When audio is behind, add a Render Delay filter of that many milliseconds to the camera's source in OBS. When audio is ahead, set the source's Sync Offset in Advanced Audio Properties.
+
+Restart the Pi and run it again to confirm the result holds. To include OBS's own delay, run it with `--page-only`, record 30 seconds in OBS, and pass the recording instead of an address. It needs `ffmpeg`.
+
+In OBS, keep "Shutdown source when not visible" and "Refresh browser when scene becomes active" off on camera sources. Either one reconnects the camera and can change the offset.
 
 ## Troubleshooting
 
